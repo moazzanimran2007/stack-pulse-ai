@@ -1,89 +1,65 @@
-# StackPulse — Private Intelligence
+# StackPulse
 
-A dark, editorial AI co-founder dashboard. StackPulse triages a founder's inbox,
-extracts commitments, drafts replies, surfaces tech-stack decisions, and keeps
-a calendar of what actually matters — without ever auto-executing.
+A dashboard prototype for startup founders that reads the inbox, pulls out the commitments hidden in it, drafts replies, and flags tech-stack news worth acting on. It suggests and drafts; the founder approves every action.
 
-## Problem
+## The problem
 
-Founders drown in low-signal inbox + tooling noise. Existing "AI assistants"
-either over-automate (risking damage) or under-deliver (generic summaries).
-StackPulse is opinionated counsel: it drafts, scores, and proposes — the founder
-always approves.
+Founders lose time to a noisy inbox and a stream of tool and model updates. Most AI assistants either act too much on their own, which is risky, or only produce generic summaries. StackPulse aims for the middle: it drafts, scores and proposes, and never acts without the founder.
 
-## Features
+## What it does
 
-- **Daily Brief** — overdue commitments, risk meter, time-saved overview
-- **Ops Agent** — extracts commitments from emails, drafts replies, tracks workflows
-- **Tech Agent** — scores tech-feed items by relevance, risk, and migration cost
-- **Calendar** — auto-suggests events from extracted commitments
-- **Activity Log** — full audit trail of every AI suggestion + founder action
-- **Integrations** — Google + 10 platform stubs (Stripe, Notion, Linear, etc.)
-- **Simulation mode** — fully usable on seed data before connecting Google
+- **Daily brief:** overdue commitments, a risk meter and an estimate of time saved.
+- **Ops agent:** reads emails, extracts commitments (who promised what, by when), drafts replies and tracks follow-up workflows.
+- **Tech agent:** scores tech-feed items, such as model releases, pricing changes and trending GitHub projects, by relevance, risk and migration cost.
+- **Calendar:** suggests events from the commitments it found.
+- **Activity log:** a record of every AI suggestion and every action the founder took.
+- **Integrations screen:** Google plus placeholder connections for other tools such as Stripe, Notion and HubSpot.
+- **Simulation mode:** the whole app works on built-in sample data, so you can try it without connecting anything.
 
-## Tech Stack
+In this version the inbox is sample data, and the tech agent generates a realistic sample feed with the model rather than reading live sources.
 
-- **Frontend**: React 18 · Vite 5 · TypeScript · Tailwind · shadcn/ui · React Router
-- **3D**: Three.js + react-three-fiber (Obsidian hero logo)
-- **State/data**: TanStack Query, React Context
-- **Backend**: Lovable Cloud (Supabase) — Postgres + Edge Functions
-- **AI**: Lovable AI Gateway (Gemini / GPT-5 family) via `ops-agent` + `tech-agent` edge functions
-- **Auth model**: device-id scoped (no login required for the demo)
+## How it works
 
-## Project Structure
+- The React front end calls two Supabase Edge Functions, `ops-agent` and `tech-agent`.
+- Each function calls a Google Gemini model through the Lovable AI Gateway and returns structured JSON, which is saved to Postgres.
+- Tables include `emails`, `commitments`, `calendar_events`, `activity_log`, `ops_tasks`, `tech_feed`, `tech_analyses`, `tech_tasks` and `workflows`.
+- There is no login in the demo. Data is tied to a random ID stored in your browser.
+
+## Run it
+
+You need Node.js 18 or newer (or Bun).
+
+```bash
+git clone https://github.com/moazzanimran2007/stack-pulse-ai.git
+cd stack-pulse-ai
+npm install
+npm run dev
+```
+
+The app reads `VITE_SUPABASE_URL`, `VITE_SUPABASE_PUBLISHABLE_KEY` and `VITE_SUPABASE_PROJECT_ID` from `.env`. Copy `.env.example` to `.env` and fill them in from your own Supabase project, then deploy the functions in `supabase/functions`.
+
+To deploy the front end on Vercel, import the repo with the Vite preset, build command `npm run build`, output folder `dist`, and the three variables above.
+
+## Tech stack
+
+React 18 and TypeScript on Vite, Tailwind CSS with shadcn/ui, React Router, TanStack Query, Three.js with react-three-fiber for the 3D logo, and Supabase (Postgres and Edge Functions). Built with Lovable.
+
+## Project structure
 
 ```
 src/
-  components/      Feature components + shadcn/ui primitives
-  pages/           Route-level screens (Index, Brief, Ops, Tech, Calendar, Activity)
-  lib/             Services & utilities (mode, activity, commitments, seed, deviceId, utils)
-  hooks/           Reusable React hooks
-  integrations/    Auto-generated Supabase client + types (do not edit)
-  index.css        Design tokens (Obsidian palette)
+  components/      Feature components and shadcn/ui building blocks
+  pages/           Screens: home, brief, ops, tech, calendar, activity
+  lib/             Services: mode, activity log, commitments, sample data, device ID
+  hooks/           Shared React hooks
+  integrations/    Generated Supabase client and types
 supabase/
-  functions/       ops-agent, tech-agent edge functions
-  config.toml      Function config
+  functions/       ops-agent and tech-agent
 ```
 
-## Setup
+## Next steps
 
-```bash
-bun install
-bun run dev
-```
-
-The app reads `VITE_SUPABASE_URL` / `VITE_SUPABASE_PUBLISHABLE_KEY` from `.env`
-(auto-managed by Lovable Cloud). Copy `.env.example` to `.env` for self-hosting.
-
-## Deployment
-
-- **Lovable**: click **Publish** in the editor.
-- **Vercel**: import the repo, framework preset *Vite*, build `bun run build`,
-  output `dist`. Add the three `VITE_SUPABASE_*` env vars from `.env.example`.
-  SPA routing works out of the box (no rewrites needed for Vercel + Vite).
-
-## Architecture Summary
-
-- **Frontend** — Vite SPA, React Router routes wrapped in `AppLayout` with the
-  Obsidian sidebar. Design tokens live in `index.css`; never hard-code colors.
-- **Services** (`src/lib/`) — pure TS modules: `mode` (connection + integrations
-  context), `commitments` (calls AI edge function + writes DB), `activity`
-  (audit log), `seed` (first-run mock data), `deviceId` (stable browser id).
-- **AI flow** — UI calls `supabase.functions.invoke("ops-agent" | "tech-agent")`.
-  Edge functions call the **Lovable AI Gateway** (no API key needed) and return
-  structured JSON, which is persisted to Postgres.
-- **Database** — Postgres tables: `emails`, `commitments`, `calendar_events`,
-  `activity_log`, `ops_tasks`, `tech_feed`, `tech_analyses`, `tech_tasks`,
-  `workflows`. RLS enabled and scoped by `device_id` in this demo.
-- **Auth** — device-id pattern (no login). For production, swap to Supabase
-  Auth + a `user_roles` table.
-- **Deployment** — Lovable Cloud auto-deploys edge functions and DB migrations.
-  Frontend ships through Lovable hosting or Vercel.
-
-## Future Improvements
-
-- Replace device-id with real Supabase Auth + Google OAuth
-- Live Gmail / Calendar integration (currently simulation seed data)
-- Per-user RLS policies (currently public for demo simplicity)
-- Background scheduled briefs via cron edge function
-- E2E tests with Playwright
+- Real sign-in with Supabase Auth and Google OAuth, with per-user data rules
+- Live Gmail and Google Calendar instead of sample data
+- Scheduled daily briefs
+- End-to-end tests with Playwright
